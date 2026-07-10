@@ -1,18 +1,20 @@
-import Link from "next/link";
+import { redirect } from "next/navigation";
+import { AUTH_ENABLED } from "@/lib/auth-config";
+import { getCurrentUser } from "@/lib/current-user";
 import TicketForm from "./ticket-form";
 
-export default function NewTicketPage() {
-  return (
-    <main className="min-h-screen bg-paper px-6 py-16 text-ink sm:px-10 lg:px-16">
-      <div className="mx-auto w-full max-w-xl">
-        <Link
-          href="/"
-          className="font-(family-name:--font-helix-display) text-2xl tracking-[0.02em] text-ink transition hover:text-ink-soft"
-        >
-          Helix
-        </Link>
+export default async function NewTicketPage() {
+  if (AUTH_ENABLED) {
+    const user = await getCurrentUser();
+    if (!user) {
+      redirect("/login");
+    }
+  }
 
-        <h1 className="mt-10 font-(family-name:--font-helix-display) text-4xl leading-tight sm:text-5xl">
+  return (
+    <main className="min-h-screen bg-paper px-6 py-10 text-ink sm:px-10 lg:px-16">
+      <div className="mx-auto w-full max-w-xl">
+        <h1 className="font-(family-name:--font-helix-display) text-4xl leading-tight sm:text-5xl">
           Submit a ticket
         </h1>
 

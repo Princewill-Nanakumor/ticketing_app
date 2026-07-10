@@ -6,6 +6,7 @@ import { FiCheck } from "react-icons/fi";
 
 type ToastProps = {
   message: string;
+  title?: string;
   open: boolean;
   onClose: () => void;
   durationMs?: number;
@@ -17,11 +18,16 @@ function subscribe() {
 
 export default function Toast({
   message,
+  title = "Ticket created",
   open,
   onClose,
   durationMs = 4200,
 }: ToastProps) {
-  const isClient = useSyncExternalStore(subscribe, () => true, () => false);
+  const isClient = useSyncExternalStore(
+    subscribe,
+    () => true,
+    () => false,
+  );
 
   useEffect(() => {
     if (!open) {
@@ -51,9 +57,9 @@ export default function Toast({
         </span>
         <div className="min-w-0 flex-1 overflow-hidden">
           <p className="font-(family-name:--font-helix-display) text-sm tracking-wide">
-            Ticket created
+            {title}
           </p>
-          <p className="mt-1 break-words text-sm text-mist">{message}</p>
+          <p className="mt-1 wrap-break-word text-sm text-mist">{message}</p>
         </div>
         <button
           type="button"

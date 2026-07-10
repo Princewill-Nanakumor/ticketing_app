@@ -2,7 +2,7 @@ import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  serverExternalPackages: ["bcrypt", "@prisma/client", "pg"],
 };
 
 export default withSentryConfig(nextConfig, {

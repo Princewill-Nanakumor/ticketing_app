@@ -26,7 +26,7 @@ export default function TicketForm() {
   );
   const [values, setValues] = useState<TicketInput>(emptyValues);
   const [toastClosed, setToastClosed] = useState(false);
-  const [handledTicketId, setHandledTicketId] = useState<number | null>(null);
+  const [handledTicketId, setHandledTicketId] = useState<string | null>(null);
   const errors = state.errors ?? {};
 
   if (

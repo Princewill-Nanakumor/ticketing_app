@@ -28,7 +28,7 @@ export type CreateTicketState = {
   success: boolean;
   message?: string;
   errors?: TicketFieldErrors;
-  ticketId?: number;
+  ticketId?: string;
 };
 
 export const initialCreateTicketState: CreateTicketState = {
