@@ -9,3 +9,13 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+model Ticket{
+  id Int @id @default(autoincrement())
+  subject String
+  description String
+  priority String
+  status String @default("open")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
