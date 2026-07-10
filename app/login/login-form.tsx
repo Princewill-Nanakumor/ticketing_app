@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import Link from "next/link";
+import { FiLoader } from "react-icons/fi";
 import { login } from "@/app/actions/auth";
 import { initialAuthState } from "@/app/actions/auth-state";
 import PasswordInput from "@/components/password-input";
@@ -88,9 +89,16 @@ export default function LoginForm() {
       <button
         type="submit"
         disabled={pending}
-        className="flex w-full cursor-pointer items-center justify-center bg-ink px-7 py-3.5 text-sm font-medium tracking-wide text-paper transition hover:bg-ink-soft disabled:opacity-70 sm:w-auto"
+        className="flex w-full cursor-pointer items-center justify-center gap-2 bg-ink px-7 py-3.5 text-sm font-medium tracking-wide text-paper transition hover:bg-ink-soft disabled:cursor-pointer disabled:opacity-70 sm:w-auto"
       >
-        {pending ? "Signing in…" : "Sign in"}
+        {pending ? (
+          <>
+            <FiLoader aria-hidden className="spinner size-4" />
+            <span>Logging in…</span>
+          </>
+        ) : (
+          "Sign in"
+        )}
       </button>
 
       <p className="text-sm text-sage">

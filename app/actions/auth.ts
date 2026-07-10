@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { logEvent } from "@/lib/sentry";
 import { isAdminEmail } from "@/lib/admin";
+import { generateUserId } from "@/lib/user-id";
 import {
   createSession,
   destroySession,
@@ -16,6 +17,56 @@ import {
   loginSchema,
   registerSchema,
 } from "@/app/actions/auth-schema";
+
+function isUniqueConstraintError(error: unknown) {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code?: string }).code === "P2002"
+  );
+}
+
+async function createUserWithUniqueId(data: {
+  name: string;
+  email: string;
+  passwordHash: string;
+  role: "USER" | "ADMIN";
+}) {
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const id = generateUserId();
+
+    const existing = await prisma.user.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+
+    if (existing) {
+      continue;
+    }
+
+    try {
+      return await prisma.user.create({
+        data: {
+          id,
+          ...data,
+        },
+      });
+    } catch (error) {
+      lastError = error;
+
+      if (isUniqueConstraintError(error)) {
+        continue;
+      }
+
+      throw error;
+    }
+  }
+
+  throw lastError ?? new Error("Could not generate a unique user ID");
+}
 
 export async function login(
   _prevState: AuthState,
@@ -109,7 +160,7 @@ export async function login(
     "info",
   );
 
-  redirect("/tickets");
+  redirect("/tickets?signedIn=1");
 }
 
 export async function register(
@@ -147,13 +198,11 @@ export async function register(
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
-    const user = await prisma.user.create({
-      data: {
-        name,
-        email,
-        passwordHash,
-        role,
-      },
+    const user = await createUserWithUniqueId({
+      name,
+      email,
+      passwordHash,
+      role,
     });
 
     try {

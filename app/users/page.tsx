@@ -55,6 +55,7 @@ export default async function UsersPage() {
                       <p className="font-(family-name:--font-helix-display) text-xl leading-snug">
                         {user.name}
                       </p>
+                      <p className="mt-1 text-sm text-ink">{user.id}</p>
                       <p className="mt-2 text-sm text-sage">{user.email}</p>
                       <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-sage">
                         <p className="capitalize">{user.role.toLowerCase()}</p>

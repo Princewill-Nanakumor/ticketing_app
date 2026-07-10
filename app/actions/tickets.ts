@@ -11,6 +11,15 @@ import {
   type CreateTicketState,
 } from "@/app/tickets/new/schema";
 
+function isUniqueConstraintError(error: unknown) {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code?: string }).code === "P2002"
+  );
+}
+
 async function createTicketWithUniqueId(data: {
   subject: string;
   description: string;
@@ -19,20 +28,38 @@ async function createTicketWithUniqueId(data: {
 }) {
   let lastError: unknown;
 
-  for (let attempt = 0; attempt < 5; attempt += 1) {
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const id = generateTicketId();
+
+    const existing = await prisma.ticket.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+
+    if (existing) {
+      continue;
+    }
+
     try {
       return await prisma.ticket.create({
         data: {
-          id: generateTicketId(),
+          id,
           ...data,
         },
       });
     } catch (error) {
       lastError = error;
+
+      // Race: another request took this ID — try a new one.
+      if (isUniqueConstraintError(error)) {
+        continue;
+      }
+
+      throw error;
     }
   }
 
-  throw lastError;
+  throw lastError ?? new Error("Could not generate a unique ticket ID");
 }
 
 export async function createTicket(

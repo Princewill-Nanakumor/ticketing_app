@@ -4,6 +4,7 @@ import { getTickets } from "@/app/actions/tickets";
 import { AUTH_ENABLED } from "@/lib/auth-config";
 import { getCurrentUser, isAdmin } from "@/lib/current-user";
 import { getPriorityClass } from "@/lib/utils";
+import SignInToast from "./sign-in-toast";
 
 function formatDate(value: Date) {
   return new Intl.DateTimeFormat("en", {
@@ -12,8 +13,13 @@ function formatDate(value: Date) {
   }).format(value);
 }
 
-export default async function TicketsPage() {
+type TicketsPageProps = {
+  searchParams: Promise<{ signedIn?: string }>;
+};
+
+export default async function TicketsPage({ searchParams }: TicketsPageProps) {
   const user = await getCurrentUser();
+  const params = await searchParams;
 
   if (AUTH_ENABLED && !user) {
     redirect("/login");
@@ -21,6 +27,7 @@ export default async function TicketsPage() {
 
   const tickets = await getTickets();
   const admin = isAdmin(user);
+  const showSignInToast = params.signedIn === "1";
 
   return (
     <main className="min-h-screen bg-paper px-6 py-10 text-ink sm:px-10 lg:px-16">
@@ -94,6 +101,8 @@ export default async function TicketsPage() {
           </ul>
         )}
       </div>
+
+      <SignInToast show={showSignInToast} />
     </main>
   );
 }

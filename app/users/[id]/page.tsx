@@ -41,6 +41,7 @@ export default async function EditUserPage({ params }: EditUserPageProps) {
         <h1 className="mt-8 font-(family-name:--font-helix-display) text-4xl leading-tight">
           Edit user
         </h1>
+        <p className="mt-2 text-sm text-sage">User ID · {user.id}</p>
         <p className="mt-4 text-sage">
           Update account details for {user.name}.
         </p>

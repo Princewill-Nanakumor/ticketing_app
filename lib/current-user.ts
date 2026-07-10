@@ -2,10 +2,8 @@ import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { AUTH_ENABLED } from "@/lib/auth-config";
+import { SESSION_COOKIE, SESSION_HOURS } from "@/lib/auth-session";
 import type { Role } from "@/app/generated/prisma/client";
-
-const SESSION_COOKIE = "helix_session";
-const SESSION_DAYS = 7;
 
 export type SessionUser = {
   id: string;
@@ -33,7 +31,7 @@ export async function createSession(user: SessionUser) {
   })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
-    .setExpirationTime(`${SESSION_DAYS}d`)
+    .setExpirationTime(`${SESSION_HOURS}h`)
     .sign(getSecret());
 
   const cookieStore = await cookies();
@@ -42,7 +40,7 @@ export async function createSession(user: SessionUser) {
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     path: "/",
-    maxAge: SESSION_DAYS * 24 * 60 * 60,
+    maxAge: SESSION_HOURS * 60 * 60,
   });
 }
 

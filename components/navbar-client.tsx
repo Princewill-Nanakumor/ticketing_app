@@ -96,7 +96,7 @@ export default function NavbarClient({
                 onClick={closeMenu}
                 aria-current={isActive("/tickets") ? "page" : undefined}
               >
-                My Tickets
+                {isAdmin ? "All Tickets" : "My Tickets"}
               </Link>
               <Link
                 href="/tickets/new"
