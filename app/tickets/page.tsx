@@ -65,48 +65,66 @@ export default async function TicketsPage() {
           </p>
         ) : (
           <ul className="mt-14 divide-y divide-ink/10 border-t border-ink/10">
-            {tickets.map((ticket) => (
-              <li key={ticket.id} className="py-6">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                  <div className="min-w-0">
-                    <p className="font-(family-name:--font-helix-display) text-xl leading-snug">
-                      {ticket.subject}
-                    </p>
-                    <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-sage">
-                      {ticket.description}
-                    </p>
-                    {admin ? (
-                      <p className="mt-3 text-sm text-sage">
-                        From {ticket.user.name} · {ticket.user.email}
+            {tickets.map((ticket) => {
+              const isClosed = ticket.status === "closed";
+              const struck = isClosed ? "line-through decoration-ink/30" : "";
+
+              return (
+                <li
+                  key={ticket.id}
+                  className={`py-6 ${
+                    isClosed ? "bg-mist/35 px-4 opacity-60 sm:px-5" : ""
+                  }`}
+                >
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                    <div className="min-w-0">
+                      <p
+                        className={`font-(family-name:--font-helix-display) text-xl leading-snug ${struck}`}
+                      >
+                        {ticket.subject}
                       </p>
-                    ) : null}
-                    <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm">
-                      <p className={getPriorityClass(ticket.priority)}>
-                        {ticket.priority}
+                      <p
+                        className={`mt-2 line-clamp-2 text-sm leading-relaxed text-sage ${struck}`}
+                      >
+                        {ticket.description}
                       </p>
-                      <p className="capitalize text-sage">
-                        {ticket.status.replaceAll("_", " ")}
-                      </p>
-                      <p className="text-sage">{formatDate(ticket.createdAt)}</p>
+                      {admin ? (
+                        <p className={`mt-3 text-sm text-sage ${struck}`}>
+                          From {ticket.user.name} · {ticket.user.email}
+                        </p>
+                      ) : null}
+                      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                        <p
+                          className={`${getPriorityClass(ticket.priority)} ${struck}`}
+                        >
+                          {ticket.priority}
+                        </p>
+                        <p className={`capitalize text-sage ${struck}`}>
+                          {ticket.status.replaceAll("_", " ")}
+                        </p>
+                        <p className={`text-sage ${struck}`}>
+                          {formatDate(ticket.createdAt)}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+                      <Link
+                        href={`/tickets/${ticket.id}`}
+                        className="inline-flex w-full cursor-pointer items-center justify-center border border-ink/20 px-5 py-2.5 text-sm font-medium text-ink transition hover:border-ink hover:bg-mist/40 sm:w-auto"
+                      >
+                        View
+                      </Link>
+                      {!isClosed &&
+                      user &&
+                      (admin || ticket.userId === user.id) ? (
+                        <CloseTicketButton ticketId={ticket.id} />
+                      ) : null}
                     </div>
                   </div>
-
-                  <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-                    <Link
-                      href={`/tickets/${ticket.id}`}
-                      className="inline-flex w-full cursor-pointer items-center justify-center border border-ink/20 px-5 py-2.5 text-sm font-medium text-ink transition hover:border-ink hover:bg-mist/40 sm:w-auto"
-                    >
-                      View
-                    </Link>
-                    {ticket.status !== "closed" &&
-                    user &&
-                    (admin || ticket.userId === user.id) ? (
-                      <CloseTicketButton ticketId={ticket.id} />
-                    ) : null}
-                  </div>
-                </div>
-              </li>
-            ))}
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>
