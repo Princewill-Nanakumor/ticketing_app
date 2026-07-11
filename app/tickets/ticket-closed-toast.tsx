@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Toast from "@/components/toast";
 import { FLASH_COOKIE } from "@/lib/flash-shared";
+import { requestNavbarSync } from "@/lib/navbar-sync";
 
 function readFlashCookie() {
   if (typeof document === "undefined") {
@@ -20,11 +21,13 @@ function clearFlashCookie() {
   document.cookie = `${FLASH_COOKIE}=; Max-Age=0; path=/; SameSite=Lax`;
 }
 
-export default function SignInToast() {
+export default function TicketClosedToast() {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    if (readFlashCookie() !== "signed_in") {
+    requestNavbarSync();
+
+    if (readFlashCookie() !== "ticket_closed") {
       return;
     }
 
@@ -39,8 +42,8 @@ export default function SignInToast() {
   return (
     <Toast
       open={open}
-      title="Signed in"
-      message="Signed in successfully."
+      title="Ticket closed"
+      message="The ticket was closed successfully."
       onClose={closeToast}
     />
   );

@@ -4,7 +4,9 @@ import { getTickets } from "@/app/actions/tickets";
 import { AUTH_ENABLED } from "@/lib/auth-config";
 import { getCurrentUser, isAdmin } from "@/lib/current-user";
 import { getPriorityClass } from "@/lib/utils";
+import CloseTicketButton from "./close-ticket-button";
 import SignInToast from "./sign-in-toast";
+import TicketClosedToast from "./ticket-closed-toast";
 
 function formatDate(value: Date) {
   return new Intl.DateTimeFormat("en", {
@@ -13,13 +15,8 @@ function formatDate(value: Date) {
   }).format(value);
 }
 
-type TicketsPageProps = {
-  searchParams: Promise<{ signedIn?: string }>;
-};
-
-export default async function TicketsPage({ searchParams }: TicketsPageProps) {
+export default async function TicketsPage() {
   const user = await getCurrentUser();
-  const params = await searchParams;
 
   if (AUTH_ENABLED && !user) {
     redirect("/login");
@@ -27,7 +24,7 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
 
   const tickets = await getTickets();
   const admin = isAdmin(user);
-  const showSignInToast = params.signedIn === "1";
+  const ticketCount = tickets.length;
 
   return (
     <main className="min-h-screen bg-paper px-6 py-10 text-ink sm:px-10 lg:px-16">
@@ -41,6 +38,9 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
               {admin
                 ? "Admin view of every request across Helix."
                 : "Open and resolved requests you have submitted."}
+            </p>
+            <p className="mt-2 text-sm text-ink">
+              {ticketCount} ticket{ticketCount === 1 ? "" : "s"}
             </p>
           </div>
 
@@ -84,17 +84,26 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
                       <p className={getPriorityClass(ticket.priority)}>
                         {ticket.priority}
                       </p>
-                      <p className="capitalize text-sage">{ticket.status}</p>
+                      <p className="capitalize text-sage">
+                        {ticket.status.replaceAll("_", " ")}
+                      </p>
                       <p className="text-sage">{formatDate(ticket.createdAt)}</p>
                     </div>
                   </div>
 
-                  <Link
-                    href={`/tickets/${ticket.id}`}
-                    className="inline-flex w-full cursor-pointer items-center justify-center border border-ink/20 px-5 py-2.5 text-sm font-medium text-ink transition hover:border-ink hover:bg-mist/40 sm:w-auto"
-                  >
-                    View
-                  </Link>
+                  <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+                    <Link
+                      href={`/tickets/${ticket.id}`}
+                      className="inline-flex w-full cursor-pointer items-center justify-center border border-ink/20 px-5 py-2.5 text-sm font-medium text-ink transition hover:border-ink hover:bg-mist/40 sm:w-auto"
+                    >
+                      View
+                    </Link>
+                    {ticket.status !== "closed" &&
+                    user &&
+                    (admin || ticket.userId === user.id) ? (
+                      <CloseTicketButton ticketId={ticket.id} />
+                    ) : null}
+                  </div>
                 </div>
               </li>
             ))}
@@ -102,7 +111,8 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
         )}
       </div>
 
-      <SignInToast show={showSignInToast} />
+      <SignInToast />
+      <TicketClosedToast />
     </main>
   );
 }

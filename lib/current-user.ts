@@ -91,8 +91,8 @@ export async function getCurrentUser() {
     return null;
   }
 
-  return prisma.user.findUnique({
-    where: { id: session.id },
+  return prisma.user.findFirst({
+    where: { id: session.id, deletedAt: null },
     select: {
       id: true,
       email: true,

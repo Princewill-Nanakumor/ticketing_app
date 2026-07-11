@@ -1,15 +1,44 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { logEvent } from "@/lib/sentry";
 import { getCurrentUser, isAdmin } from "@/lib/current-user";
 import { generateTicketId, isTicketId } from "@/lib/ticket-id";
+import { recordTicketActivity } from "@/lib/ticket-activity";
+import { setFlash } from "@/lib/flash";
+import { TicketStatus } from "@/app/generated/prisma/client";
 import {
+  commentSchema,
   getTicketFieldErrors,
   ticketSchema,
+  type CommentState,
   type CreateTicketState,
 } from "@/app/tickets/new/schema";
+
+const ticketDetailInclude = {
+  user: {
+    select: { id: true, name: true, email: true },
+  },
+  comments: {
+    orderBy: { createdAt: "asc" as const },
+    include: {
+      author: {
+        select: { id: true, name: true, email: true, role: true },
+      },
+    },
+  },
+  activities: {
+    orderBy: { createdAt: "desc" as const },
+    take: 50,
+    include: {
+      actor: {
+        select: { id: true, name: true, email: true },
+      },
+    },
+  },
+};
 
 function isUniqueConstraintError(error: unknown) {
   return (
@@ -116,6 +145,13 @@ export async function createTicket(
       description: parsed.data.description,
       priority: parsed.data.priority,
       userId: user.id,
+    });
+
+    await recordTicketActivity({
+      ticketId: ticket.id,
+      actorId: user.id,
+      action: "created",
+      detail: `Created ticket with ${parsed.data.priority} priority`,
     });
 
     revalidatePath("/tickets");
@@ -231,15 +267,7 @@ export async function getTicketById(id: string) {
 
     const ticket = await prisma.ticket.findUnique({
       where: { id },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-      },
+      include: ticketDetailInclude,
     });
 
     if (!ticket) {
@@ -252,24 +280,17 @@ export async function getTicketById(id: string) {
       return null;
     }
 
-    const canView = isAdmin(user) || ticket.userId === user?.id;
+    const canView = isAdmin(user) || ticket.userId === user.id;
 
     if (!canView) {
       await logEvent(
         "Unauthorized ticket detail attempt",
         "ticket",
-        { ticketId: id, userId: user?.id },
+        { ticketId: id, userId: user.id },
         "warning",
       );
       return null;
     }
-
-    await logEvent(
-      "Fetched ticket details",
-      "ticket",
-      { ticketId: ticket.id, userId: user?.id },
-      "info",
-    );
 
     return ticket;
   } catch (error) {
@@ -282,4 +303,165 @@ export async function getTicketById(id: string) {
     );
     return null;
   }
+}
+
+export async function closeTicket(formData: FormData) {
+  const user = await getCurrentUser();
+  const ticketId = String(formData.get("ticketId") ?? "");
+  const redirectToRaw = String(formData.get("redirectTo") ?? "").trim();
+  const redirectTo =
+    redirectToRaw === "/tickets" || redirectToRaw.startsWith("/tickets/")
+      ? redirectToRaw
+      : `/tickets/${ticketId}`;
+
+  if (!user) {
+    await logEvent(
+      "Unauthorized ticket close attempt",
+      "ticket",
+      { ticketId },
+      "warning",
+    );
+    redirect("/login");
+  }
+
+  if (!isTicketId(ticketId)) {
+    await logEvent("Invalid ticket ID on close", "ticket", { ticketId }, "warning");
+    redirect("/tickets");
+  }
+
+  try {
+    const ticket = await prisma.ticket.findUnique({
+      where: { id: ticketId },
+      select: { id: true, status: true, userId: true },
+    });
+
+    if (!ticket) {
+      await logEvent("Ticket not found on close", "ticket", { ticketId }, "warning");
+      redirect("/tickets");
+    }
+
+    const canClose = isAdmin(user) || ticket.userId === user.id;
+
+    if (!canClose) {
+      await logEvent(
+        "Unauthorized ticket close attempt",
+        "ticket",
+        { ticketId, userId: user.id },
+        "warning",
+      );
+      redirect("/tickets");
+    }
+
+    if (ticket.status === TicketStatus.closed) {
+      redirect(redirectTo);
+    }
+
+    await prisma.ticket.update({
+      where: { id: ticketId },
+      data: {
+        status: TicketStatus.closed,
+        closedAt: new Date(),
+      },
+    });
+
+    await recordTicketActivity({
+      ticketId,
+      actorId: user.id,
+      action: "closed",
+      detail: "Marked ticket as closed",
+    });
+
+    revalidatePath("/tickets");
+    revalidatePath(`/tickets/${ticketId}`);
+
+    await logEvent(
+      "Ticket closed",
+      "ticket",
+      { ticketId, userId: user.id },
+      "info",
+    );
+  } catch (error) {
+    await logEvent(
+      "Error closing ticket",
+      "ticket",
+      { ticketId, userId: user.id },
+      "error",
+      error,
+    );
+  }
+
+  await setFlash("ticket_closed");
+  redirect(redirectTo);
+}
+
+export async function addComment(
+  ticketId: string,
+  _prevState: CommentState,
+  formData: FormData,
+): Promise<CommentState> {
+  const user = await getCurrentUser();
+
+  if (!user) {
+    return { success: false, message: "You must be logged in." };
+  }
+
+  if (!isTicketId(ticketId)) {
+    return { success: false, message: "Invalid ticket." };
+  }
+
+  const ticket = await prisma.ticket.findUnique({
+    where: { id: ticketId },
+    select: { id: true, userId: true, status: true },
+  });
+
+  if (!ticket) {
+    return { success: false, message: "Ticket not found." };
+  }
+
+  if (ticket.status === TicketStatus.closed) {
+    return {
+      success: false,
+      message: "This ticket is closed. New replies are disabled.",
+    };
+  }
+
+  const canComment = isAdmin(user) || ticket.userId === user.id;
+
+  if (!canComment) {
+    return { success: false, message: "You cannot comment on this ticket." };
+  }
+
+  const parsed = commentSchema.safeParse({
+    body: formData.get("body"),
+  });
+
+  if (!parsed.success) {
+    return {
+      success: false,
+      message: "Please fix the comment.",
+      errors: { body: parsed.error.flatten().fieldErrors.body?.[0] },
+    };
+  }
+
+  await prisma.comment.create({
+    data: {
+      body: parsed.data.body,
+      ticketId,
+      authorId: user.id,
+    },
+  });
+
+  await recordTicketActivity({
+    ticketId,
+    actorId: user.id,
+    action: "commented",
+    detail: "Added a comment",
+  });
+
+  revalidatePath(`/tickets/${ticketId}`);
+
+  return {
+    success: true,
+    message: "Comment added.",
+  };
 }

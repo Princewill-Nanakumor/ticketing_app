@@ -19,6 +19,14 @@ export const ticketSchema = z.object({
   }),
 });
 
+export const commentSchema = z.object({
+  body: z
+    .string()
+    .trim()
+    .min(1, "Comment is required")
+    .max(5000, "Comment must be 5000 characters or fewer"),
+});
+
 export type TicketInput = z.infer<typeof ticketSchema>;
 export type TicketFieldErrors = Partial<
   Record<keyof TicketInput, string | undefined>
@@ -32,6 +40,16 @@ export type CreateTicketState = {
 };
 
 export const initialCreateTicketState: CreateTicketState = {
+  success: false,
+};
+
+export type CommentState = {
+  success: boolean;
+  message?: string;
+  errors?: { body?: string };
+};
+
+export const initialCommentState: CommentState = {
   success: false,
 };
 

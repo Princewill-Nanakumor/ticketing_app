@@ -1,6 +1,18 @@
-/** Only this email is granted ADMIN on registration. Everyone else is USER. */
-export const ADMIN_EMAIL = "daviddillion272@gmail.com";
+/** Primary admin email — set ADMIN_EMAIL in .env */
+export function getAdminEmail() {
+  const email = process.env.ADMIN_EMAIL?.trim().toLowerCase();
+
+  if (!email) {
+    throw new Error("ADMIN_EMAIL is not set");
+  }
+
+  return email;
+}
 
 export function isAdminEmail(email: string) {
-  return email.trim().toLowerCase() === ADMIN_EMAIL;
+  try {
+    return email.trim().toLowerCase() === getAdminEmail();
+  } catch {
+    return false;
+  }
 }

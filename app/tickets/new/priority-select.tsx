@@ -12,16 +12,24 @@ export default function PrioritySelect({
   onChange,
   error,
   describedBy,
+  disabled = false,
 }: {
   name?: string;
   value: Priority;
   onChange: (value: Priority) => void;
   error?: string;
   describedBy?: string;
+  disabled?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const listId = useId();
+
+  useEffect(() => {
+    if (disabled) {
+      setOpen(false);
+    }
+  }, [disabled]);
 
   useEffect(() => {
     function onPointerDown(event: MouseEvent) {
@@ -49,12 +57,13 @@ export default function PrioritySelect({
       <input type="hidden" name={name} value={value} />
       <button
         type="button"
+        disabled={disabled}
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={listId}
         aria-describedby={describedBy}
         onClick={() => setOpen((current) => !current)}
-        className={`flex w-full items-center justify-between border bg-paper px-4 py-3 text-left text-ink transition focus-visible:outline-none ${
+        className={`flex w-full items-center justify-between border bg-paper px-4 py-3 text-left text-ink transition focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-70 ${
           error
             ? "border-red-700/70 focus-visible:border-red-700"
             : "border-ink/15 hover:border-ink/35 focus-visible:border-brass"
@@ -67,7 +76,7 @@ export default function PrioritySelect({
         />
       </button>
 
-      {open ? (
+      {open && !disabled ? (
         <ul
           id={listId}
           role="listbox"

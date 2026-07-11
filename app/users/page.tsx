@@ -4,6 +4,7 @@ import { getUsers } from "@/app/actions/users";
 import { getCurrentUser, isAdmin } from "@/lib/current-user";
 import { isAdminEmail } from "@/lib/admin";
 import DeleteUserButton from "./delete-user-button";
+import UserDeletedToast from "./user-deleted-toast";
 
 function formatDate(value: Date) {
   return new Intl.DateTimeFormat("en", {
@@ -24,6 +25,7 @@ export default async function UsersPage() {
   }
 
   const users = await getUsers();
+  const userCount = users.length;
 
   return (
     <main className="min-h-screen bg-paper px-6 py-10 text-ink sm:px-10 lg:px-16">
@@ -35,9 +37,12 @@ export default async function UsersPage() {
           <p className="mt-4 max-w-md text-sage">
             View, edit, or remove accounts across Helix.
           </p>
+          <p className="mt-2 text-sm text-ink">
+            {userCount} user{userCount === 1 ? "" : "s"}
+          </p>
         </div>
 
-        {users.length === 0 ? (
+        {userCount === 0 ? (
           <p className="mt-14 border-t border-ink/10 pt-10 text-sage">
             No users found.
           </p>
@@ -60,8 +65,8 @@ export default async function UsersPage() {
                       <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-sage">
                         <p className="capitalize">{user.role.toLowerCase()}</p>
                         <p>
-                          {user._count.tickets} ticket
-                          {user._count.tickets === 1 ? "" : "s"}
+                          {user._count.ownedTickets} ticket
+                          {user._count.ownedTickets === 1 ? "" : "s"}
                         </p>
                         <p>Joined {formatDate(user.createdAt)}</p>
                       </div>
@@ -88,6 +93,8 @@ export default async function UsersPage() {
           </ul>
         )}
       </div>
+
+      <UserDeletedToast />
     </main>
   );
 }

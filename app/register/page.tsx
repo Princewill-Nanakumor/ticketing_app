@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/current-user";
 import RegisterForm from "./register-form";
@@ -13,13 +12,7 @@ export default async function RegisterPage() {
   return (
     <main className="min-h-screen bg-paper px-6 py-16 text-ink sm:px-10 lg:px-16">
       <div className="mx-auto w-full max-w-md">
-        <Link
-          href="/"
-          className="font-(family-name:--font-helix-display) text-2xl tracking-[0.02em] text-ink transition hover:text-ink-soft"
-        >
-          Helix
-        </Link>
-        <h1 className="mt-10 font-(family-name:--font-helix-display) text-4xl leading-tight">
+        <h1 className="font-(family-name:--font-helix-display) text-4xl leading-tight">
           Create account
         </h1>
         <p className="mt-4 text-sage">

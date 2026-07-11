@@ -20,11 +20,11 @@ function clearFlashCookie() {
   document.cookie = `${FLASH_COOKIE}=; Max-Age=0; path=/; SameSite=Lax`;
 }
 
-export default function SignInToast() {
+export default function UserDeletedToast() {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    if (readFlashCookie() !== "signed_in") {
+    if (readFlashCookie() !== "user_deleted") {
       return;
     }
 
@@ -39,8 +39,8 @@ export default function SignInToast() {
   return (
     <Toast
       open={open}
-      title="Signed in"
-      message="Signed in successfully."
+      title="User deleted"
+      message="The user was deleted successfully."
       onClose={closeToast}
     />
   );

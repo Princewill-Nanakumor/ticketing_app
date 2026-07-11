@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Libre_Franklin, Syne } from "next/font/google";
+import Navbar from "@/components/navbar";
 import "./globals.css";
 
 const display = Syne({
@@ -28,7 +29,10 @@ export default function RootLayout({
       lang="en"
       className={`${display.variable} ${body.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col font-sans">{children}</body>
+      <body className="flex min-h-full flex-col font-sans">
+        <Navbar />
+        {children}
+      </body>
     </html>
   );
 }

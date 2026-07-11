@@ -11,12 +11,28 @@ import {
   destroySession,
   getCurrentUser,
 } from "@/lib/current-user";
+import {
+  clearLoginRateLimit,
+  checkLoginRateLimit,
+  recordFailedLogin,
+} from "@/lib/login-rate-limit";
+import { setFlash } from "@/lib/flash";
+import { headers } from "next/headers";
 import type { AuthState } from "@/app/actions/auth-state";
 import {
   getAuthFieldErrors,
   loginSchema,
   registerSchema,
 } from "@/app/actions/auth-schema";
+
+async function getRequestIp() {
+  const headerStore = await headers();
+  return (
+    headerStore.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    headerStore.get("x-real-ip") ||
+    "unknown"
+  );
+}
 
 function isUniqueConstraintError(error: unknown) {
   return (
@@ -87,10 +103,30 @@ export async function login(
 
   const email = parsed.data.email.toLowerCase();
   const { password } = parsed.data;
+  const ip = await getRequestIp();
+  const rate = checkLoginRateLimit(email, ip);
+
+  if (!rate.allowed) {
+    await logEvent(
+      "Login rate limit hit",
+      "auth.login",
+      { email, retryAfterSeconds: rate.retryAfterSeconds },
+      "warning",
+    );
+    return {
+      success: false,
+      message: `Too many login attempts. Try again in ${rate.retryAfterSeconds} seconds.`,
+      errors: {
+        form: `Too many login attempts. Try again in ${rate.retryAfterSeconds} seconds.`,
+      },
+    };
+  }
 
   let user;
   try {
-    user = await prisma.user.findUnique({ where: { email } });
+    user = await prisma.user.findFirst({
+      where: { email, deletedAt: null },
+    });
   } catch (error) {
     await logEvent("Login DB lookup failed", "auth.login", { email }, "error", error);
     return {
@@ -119,6 +155,7 @@ export async function login(
   }
 
   if (!user || !passwordMatches) {
+    recordFailedLogin(email, ip);
     await logEvent(
       "Failed login attempt",
       "auth.login",
@@ -131,6 +168,8 @@ export async function login(
       errors: { form: "Invalid email or password." },
     };
   }
+
+  clearLoginRateLimit(email, ip);
 
   try {
     await createSession({
@@ -160,7 +199,8 @@ export async function login(
     "info",
   );
 
-  redirect("/tickets?signedIn=1");
+  await setFlash("signed_in");
+  redirect("/tickets");
 }
 
 export async function register(
@@ -205,27 +245,6 @@ export async function register(
       role,
     });
 
-    try {
-      await createSession({
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-      });
-    } catch (error) {
-      await logEvent(
-        "Register session create failed",
-        "auth.register",
-        { email, userId: user.id },
-        "error",
-        error,
-      );
-      return {
-        success: true,
-        message: "Account created. Please sign in.",
-      };
-    }
-
     await logEvent(
       "User registered",
       "auth.register",
@@ -235,7 +254,7 @@ export async function register(
 
     return {
       success: true,
-      message: "Account created successfully.",
+      message: "Account created successfully. Redirecting you to sign in…",
     };
   } catch (error) {
     await logEvent(

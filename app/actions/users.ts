@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { logEvent } from "@/lib/sentry";
 import { isAdminEmail } from "@/lib/admin";
 import { getCurrentUser, isAdmin } from "@/lib/current-user";
+import { setFlash } from "@/lib/flash";
 import {
   getUpdateUserFieldErrors,
   updateUserSchema,
@@ -21,7 +22,7 @@ const userSelect = {
   createdAt: true,
   updatedAt: true,
   _count: {
-    select: { tickets: true },
+    select: { ownedTickets: true },
   },
 } as const;
 
@@ -50,6 +51,7 @@ export async function getUsers() {
     }
 
     const users = await prisma.user.findMany({
+      where: { deletedAt: null },
       orderBy: { createdAt: "desc" },
       select: userSelect,
     });
@@ -262,7 +264,7 @@ export async function deleteUser(formData: FormData) {
   try {
     const existing = await prisma.user.findUnique({ where: { id: userId } });
 
-    if (!existing) {
+    if (!existing || existing.deletedAt) {
       redirect("/users");
     }
 
@@ -277,7 +279,9 @@ export async function deleteUser(formData: FormData) {
     }
 
     if (existing.role === "ADMIN") {
-      const adminCount = await prisma.user.count({ where: { role: "ADMIN" } });
+      const adminCount = await prisma.user.count({
+        where: { role: "ADMIN", deletedAt: null },
+      });
 
       if (adminCount <= 1) {
         await logEvent(
@@ -290,17 +294,33 @@ export async function deleteUser(formData: FormData) {
       }
     }
 
-    await prisma.user.delete({ where: { id: userId } });
+    // Soft-delete: keep ticket history by reassigning ownership to the admin.
+    await prisma.$transaction([
+      prisma.ticket.updateMany({
+        where: { userId },
+        data: { userId: admin.id },
+      }),
+      prisma.user.update({
+        where: { id: userId },
+        data: {
+          deletedAt: new Date(),
+          email: `deleted+${userId.toLowerCase()}@deleted.invalid`,
+          name: `${existing.name} (deleted)`,
+        },
+      }),
+    ]);
 
     revalidatePath("/users");
     revalidatePath("/tickets");
 
     await logEvent(
-      "User deleted",
+      "User soft-deleted and tickets reassigned",
       "user",
       { userId, adminId: admin.id },
       "info",
     );
+
+    await setFlash("user_deleted");
   } catch (error) {
     await logEvent(
       "User delete failed",

@@ -9,13 +9,13 @@ import {
 } from "react";
 import { createPortal, useFormStatus } from "react-dom";
 import { FiLoader } from "react-icons/fi";
-import { deleteUser } from "@/app/actions/users";
+import { closeTicket } from "@/app/actions/tickets";
 
 function subscribe() {
   return () => {};
 }
 
-function DeleteSubmitButton({
+function CloseSubmitButton({
   onPendingChange,
 }: {
   onPendingChange: (pending: boolean) => void;
@@ -30,26 +30,28 @@ function DeleteSubmitButton({
     <button
       type="submit"
       disabled={pending}
-      className="inline-flex w-full cursor-pointer items-center justify-center gap-2 border border-red-700/40 bg-red-700 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-red-800 disabled:cursor-pointer disabled:opacity-70 sm:w-auto"
+      className="inline-flex w-full cursor-pointer items-center justify-center gap-2 border border-red-700/40 bg-red-700 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
     >
       {pending ? (
         <>
           <FiLoader aria-hidden className="spinner size-4" />
-          <span>Deleting…</span>
+          <span>Closing…</span>
         </>
       ) : (
-        "Delete"
+        "Close ticket"
       )}
     </button>
   );
 }
 
-export default function DeleteUserButton({
-  userId,
-  userName,
+export default function CloseTicketButton({
+  ticketId,
+  redirectTo = "/tickets",
+  fullWidth = true,
 }: {
-  userId: string;
-  userName: string;
+  ticketId: string;
+  redirectTo?: string;
+  fullWidth?: boolean;
 }) {
   const titleId = useId();
   const descriptionId = useId();
@@ -97,9 +99,11 @@ export default function DeleteUserButton({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="w-full cursor-pointer border border-red-700/40 bg-red-700 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-red-800 sm:w-auto"
+        className={`cursor-pointer border border-red-700/40 bg-red-700 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-red-800 ${
+          fullWidth ? "w-full sm:w-auto" : "w-auto"
+        }`}
       >
-        Delete
+        Close ticket
       </button>
 
       {isClient && open
@@ -121,31 +125,31 @@ export default function DeleteUserButton({
                   id={titleId}
                   className="font-(family-name:--font-helix-display) text-2xl leading-snug"
                 >
-                  Delete user?
+                  Close ticket?
                 </h2>
                 <p
                   id={descriptionId}
                   className="mt-3 text-sm leading-relaxed text-sage"
                 >
-                  Are you sure you want to delete{" "}
-                  <span className="text-ink">{userName}</span>? Their tickets will
-                  be reassigned to you and the account will be deactivated.
+                  Are you sure you want to close this ticket? New replies will
+                  be disabled once it is closed.
                 </p>
 
                 <form
-                  action={deleteUser}
+                  action={closeTicket}
                   className="mt-8 flex flex-col gap-2 sm:flex-row sm:justify-end"
                 >
-                  <input type="hidden" name="userId" value={userId} />
+                  <input type="hidden" name="ticketId" value={ticketId} />
+                  <input type="hidden" name="redirectTo" value={redirectTo} />
                   <button
                     type="button"
                     onClick={closeModal}
                     disabled={pending}
-                    className="inline-flex w-full cursor-pointer items-center justify-center border border-ink/20 px-5 py-2.5 text-sm font-medium text-ink transition hover:border-ink hover:bg-mist/40 disabled:cursor-pointer disabled:opacity-70 sm:w-auto"
+                    className="inline-flex w-full cursor-pointer items-center justify-center border border-ink/20 px-5 py-2.5 text-sm font-medium text-ink transition hover:border-ink hover:bg-mist/40 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
                   >
                     Cancel
                   </button>
-                  <DeleteSubmitButton onPendingChange={onPendingChange} />
+                  <CloseSubmitButton onPendingChange={onPendingChange} />
                 </form>
               </div>
             </div>,
