@@ -1,0 +1,22 @@
+services:
+  db:
+    image: postgres:17
+    env_file:
+      - .env.docker
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  app:
+    build:
+      context: .
+      args:
+        DATABASE_URL: ${DATABASE_URL}
+    env_file:
+      - .env.docker
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db
+
+volumes:
+  postgres-data:

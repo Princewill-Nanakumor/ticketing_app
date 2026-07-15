@@ -15,8 +15,47 @@ const body = Libre_Franklin({
 });
 
 export const metadata: Metadata = {
-  title: "Helix — Support Tickets",
-  description: "Submit and track support tickets with calm, clear focus.",
+  applicationName: "Helix",
+  title: {
+    default: "Helix — Customer Support Ticketing",
+    template: "%s | Helix",
+  },
+  description:
+    "A modern customer support platform for submitting, tracking, and discussing support tickets.",
+  keywords: [
+    "customer support",
+    "helpdesk",
+    "ticketing system",
+    "support tickets",
+    "Next.js",
+    "Princewill Nanakumor",
+  ],
+  authors: [
+    {
+      name: "Nanakumor Princewill",
+      url: "https://princewillnanakumor.com/",
+    },
+  ],
+  creator: "Nanakumor Princewill",
+  publisher: "Nanakumor Princewill",
+  category: "technology",
+  openGraph: {
+    type: "website",
+    siteName: "Helix",
+    title: "Helix — Customer Support Ticketing",
+    description:
+      "Submit, track, and discuss customer support tickets through a clear, role-based helpdesk.",
+  },
+  twitter: {
+    card: "summary",
+    title: "Helix — Customer Support Ticketing",
+    description:
+      "Submit, track, and discuss customer support tickets through a clear, role-based helpdesk.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({

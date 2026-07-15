@@ -56,6 +56,18 @@ export default function Homepage() {
               Submit a ticket
             </Link>
           </div>
+
+          <p className="hero-rise-delay-2 mt-8 text-sm text-mist">
+            Built by{" "}
+            <a
+              href="https://princewillnanakumor.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-paper underline decoration-brass underline-offset-4 transition hover:text-brass"
+            >
+              Nanakumor Princewill
+            </a>
+          </p>
         </div>
       </section>
     </main>
