@@ -56,6 +56,11 @@ export const metadata: Metadata = {
     index: true,
     follow: true,
   },
+  other: {
+    portfolio: "https://princewillnanakumor.com/",
+    "project-page":
+      "https://princewillnanakumor.com/projects/helix-ticketing-app",
+  },
 };
 
 export default function RootLayout({
