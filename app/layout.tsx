@@ -23,12 +23,11 @@ export const metadata: Metadata = {
   description:
     "A modern customer support platform for submitting, tracking, and discussing support tickets.",
   keywords: [
-    "customer support",
-    "helpdesk",
-    "ticketing system",
-    "support tickets",
-    "Next.js",
-    "Princewill Nanakumor",
+    "Hilex ticking app",
+    "Helix ticking system",
+    "Helix ticking platform",
+    "Helix ticking solution",
+    "Helix ticking software",
   ],
   authors: [
     {
