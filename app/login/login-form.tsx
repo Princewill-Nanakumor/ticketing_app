@@ -111,7 +111,7 @@ export default function LoginForm() {
         No account yet?{" "}
         <Link
           href="/register"
-          className="text-ink underline-offset-4 hover:underline"
+          className="text-ink underline underline-offset-4 hover:underline"
         >
           Create one
         </Link>

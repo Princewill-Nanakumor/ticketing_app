@@ -57,7 +57,7 @@ export default async function TicketsPage() {
             No tickets yet.{" "}
             <Link
               href="/tickets/new"
-              className="text-ink underline-offset-4 hover:underline"
+              className="text-ink underline underline-offset-4 hover:underline"
             >
               Submit the first one
             </Link>

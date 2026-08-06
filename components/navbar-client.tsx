@@ -144,7 +144,7 @@ export default function NavbarClient({
                 aria-current={isActive("/tickets") ? "page" : undefined}
               >
                 {auth.isAdmin ? "All Tickets" : "My Tickets"}
-                <span className="ml-1 text-sage">({auth.ticketCount})</span>
+                <span className="ml-1">({auth.ticketCount})</span>
               </Link>
               <Link
                 href="/tickets/new"

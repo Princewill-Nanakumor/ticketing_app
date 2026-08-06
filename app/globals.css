@@ -3,7 +3,8 @@
 :root {
   --ink: #14201c;
   --ink-soft: #2a3b34;
-  --sage: #5f7468;
+  /* Dark enough for AA contrast on --paper (#eef1ee): ≥ 4.5:1 */
+  --sage: #45584e;
   --mist: #d7ddd8;
   --paper: #eef1ee;
   --brass: #8f7348;
