@@ -9,6 +9,7 @@
   --paper: #eef1ee;
   --brass: #8f7348;
   --brass-deep: #6f5836;
+  --helix-nav-height: 4.5rem;
   --background: var(--paper);
   --foreground: var(--ink);
 }

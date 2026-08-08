@@ -99,8 +99,8 @@ export default function NavbarClient({
   }
 
   return (
-    <header className="sticky top-0 z-50 border-b border-ink/10 bg-paper/95 backdrop-blur-sm">
-      <nav className="mx-auto flex w-full max-w-4xl items-center justify-between gap-4 px-6 py-4 sm:px-10 lg:px-16">
+    <header className="sticky top-0 z-50 h-(--helix-nav-height) border-b border-ink/10 bg-paper/95 backdrop-blur-sm">
+      <nav className="mx-auto flex h-full w-full max-w-4xl items-center justify-between gap-4 px-6 sm:px-10 lg:px-16">
         <Link
           href="/"
           className="font-(family-name:--font-helix-display) text-xl tracking-[0.02em] text-ink transition hover:text-ink-soft"
