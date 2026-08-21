@@ -25,11 +25,9 @@ export default function PrioritySelect({
   const rootRef = useRef<HTMLDivElement>(null);
   const listId = useId();
 
-  useEffect(() => {
-    if (disabled) {
-      setOpen(false);
-    }
-  }, [disabled]);
+  if (disabled && open) {
+    setOpen(false);
+  }
 
   useEffect(() => {
     function onPointerDown(event: MouseEvent) {

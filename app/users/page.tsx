@@ -5,6 +5,7 @@ import { getCurrentUser, isAdmin } from "@/lib/current-user";
 import { isAdminEmail } from "@/lib/admin";
 import DeleteUserButton from "./delete-user-button";
 import UserDeletedToast from "./user-deleted-toast";
+import { getFlash } from "@/lib/flash";
 
 function formatDate(value: Date) {
   return new Intl.DateTimeFormat("en", {
@@ -24,7 +25,7 @@ export default async function UsersPage() {
     redirect("/tickets");
   }
 
-  const users = await getUsers();
+  const [users, flash] = await Promise.all([getUsers(), getFlash()]);
   const userCount = users.length;
 
   return (
@@ -74,6 +75,12 @@ export default async function UsersPage() {
 
                     <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
                       <Link
+                        href={`/tickets?userId=${user.id}`}
+                        className="inline-flex w-full cursor-pointer items-center justify-center border border-ink/20 px-5 py-2.5 text-sm font-medium text-ink transition hover:border-ink hover:bg-mist/40 sm:w-auto"
+                      >
+                        View tickets
+                      </Link>
+                      <Link
                         href={`/users/${user.id}`}
                         className="inline-flex w-full cursor-pointer items-center justify-center border border-ink/20 px-5 py-2.5 text-sm font-medium text-ink transition hover:border-ink hover:bg-mist/40 sm:w-auto"
                       >
@@ -94,7 +101,7 @@ export default async function UsersPage() {
         )}
       </div>
 
-      <UserDeletedToast />
+      <UserDeletedToast key={userCount} flash={flash} />
     </main>
   );
 }

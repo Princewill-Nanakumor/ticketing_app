@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { FiArrowLeft } from "react-icons/fi";
 import { getTicketById } from "@/app/actions/tickets";
 import { AUTH_ENABLED } from "@/lib/auth-config";
 import { getCurrentUser, isAdmin } from "@/lib/current-user";
 import { formatStatusLabel } from "@/lib/ticket-activity";
+import { isUserId } from "@/lib/user-id";
 import { getPriorityClass } from "@/lib/utils";
 import CloseTicketButton from "../close-ticket-button";
 import TicketClosedToast from "../ticket-closed-toast";
@@ -11,6 +13,7 @@ import CommentForm from "./comment-form";
 
 type TicketDetailPageProps = {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ userId?: string | string[] }>;
 };
 
 function formatDate(value: Date) {
@@ -22,8 +25,15 @@ function formatDate(value: Date) {
 
 export default async function TicketDetailPage({
   params,
+  searchParams,
 }: TicketDetailPageProps) {
   const { id } = await params;
+  const rawUserId = (await searchParams).userId;
+  const fromUserId =
+    typeof rawUserId === "string" && isUserId(rawUserId) ? rawUserId : undefined;
+  const ticketsHref = fromUserId
+    ? `/tickets?userId=${fromUserId}`
+    : "/tickets";
   const user = await getCurrentUser();
 
   if (AUTH_ENABLED && !user) {
@@ -45,10 +55,11 @@ export default async function TicketDetailPage({
     <main className="min-h-screen bg-paper px-6 py-16 text-ink sm:px-10 lg:px-16">
       <div className="mx-auto w-full max-w-3xl">
         <Link
-          href="/tickets"
-          className="text-sm text-sage transition hover:text-ink"
+          href={ticketsHref}
+          className="inline-flex items-center gap-2 text-sm text-sage underline-offset-4 hover:text-ink hover:underline"
         >
-          ← Back to tickets
+          <FiArrowLeft aria-hidden className="size-4" />
+          Back to tickets
         </Link>
 
         <div
@@ -198,7 +209,11 @@ export default async function TicketDetailPage({
           <div className="mt-10 flex justify-end border-t border-ink/10 pt-8">
             <CloseTicketButton
               ticketId={ticket.id}
-              redirectTo={`/tickets/${ticket.id}`}
+              redirectTo={
+                fromUserId
+                  ? `/tickets/${ticket.id}?userId=${fromUserId}`
+                  : `/tickets/${ticket.id}`
+              }
               fullWidth={false}
             />
           </div>

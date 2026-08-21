@@ -1,12 +1,25 @@
 "use client";
 
-import { useActionState, useCallback, useEffect, useState } from "react";
+import {
+  useActionState,
+  useCallback,
+  useEffect,
+  useState,
+  type FormEvent,
+} from "react";
 import { FiLoader } from "react-icons/fi";
 import { createTicket } from "@/app/actions/tickets";
 import Toast from "@/components/toast";
 import { requestNavbarSync } from "@/lib/navbar-sync";
+import { useDismissedErrors } from "@/lib/dismissed-form-errors";
 import PrioritySelect from "./priority-select";
-import { initialCreateTicketState, type TicketInput } from "./schema";
+import {
+  getTicketFieldErrors,
+  initialCreateTicketState,
+  ticketSchema,
+  type CreateTicketState,
+  type TicketInput,
+} from "./schema";
 
 const fieldClass =
   "w-full border bg-paper px-4 py-3 text-ink placeholder:text-sage/70 transition focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-70";
@@ -28,9 +41,16 @@ export default function TicketForm() {
     initialCreateTicketState,
   );
   const [values, setValues] = useState<TicketInput>(emptyValues);
+  const [clientState, setClientState] = useState<CreateTicketState | null>(null);
   const [toastClosed, setToastClosed] = useState(false);
   const [handledTicketId, setHandledTicketId] = useState<string | null>(null);
-  const errors = state.errors ?? {};
+  const { dismiss, resetDismissed, fieldError, formMessage } =
+    useDismissedErrors();
+  const displayState = pending ? initialCreateTicketState : (clientState ?? state);
+  const subjectError = fieldError(displayState.errors, "subject");
+  const descriptionError = fieldError(displayState.errors, "description");
+  const priorityError = fieldError(displayState.errors, "priority");
+  const message = formMessage(displayState.message);
 
   if (
     state.success &&
@@ -39,7 +59,9 @@ export default function TicketForm() {
   ) {
     setHandledTicketId(state.ticketId);
     setToastClosed(false);
+    setClientState(null);
     setValues(emptyValues);
+    resetDismissed();
   }
 
   useEffect(() => {
@@ -54,9 +76,36 @@ export default function TicketForm() {
     setToastClosed(true);
   }, []);
 
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    resetDismissed();
+    const formData = new FormData(event.currentTarget);
+    const parsed = ticketSchema.safeParse({
+      subject: formData.get("subject"),
+      description: formData.get("description"),
+      priority: formData.get("priority"),
+    });
+
+    if (!parsed.success) {
+      event.preventDefault();
+      setClientState({
+        success: false,
+        message: "Please fix the errors above.",
+        errors: getTicketFieldErrors(parsed.error),
+      });
+      return;
+    }
+
+    setClientState(null);
+  }
+
   return (
     <>
-      <form className="mt-10" action={formAction} noValidate>
+      <form
+        className="mt-10"
+        action={formAction}
+        onSubmit={handleSubmit}
+        noValidate
+      >
         <fieldset disabled={pending} className={fieldsetClass}>
           <div className="space-y-2">
             <label
@@ -70,20 +119,21 @@ export default function TicketForm() {
               name="subject"
               type="text"
               value={values.subject}
-              onChange={(event) =>
+              onChange={(event) => {
+                dismiss("subject");
                 setValues((current) => ({
                   ...current,
                   subject: event.target.value,
-                }))
-              }
-              aria-invalid={Boolean(errors.subject)}
-              aria-describedby={errors.subject ? "subject-error" : undefined}
+                }));
+              }}
+              aria-invalid={Boolean(subjectError)}
+              aria-describedby={subjectError ? "subject-error" : undefined}
               placeholder="Brief summary of the issue"
-              className={`${fieldClass} ${errors.subject ? fieldErrorClass : fieldOkClass}`}
+              className={`${fieldClass} ${subjectError ? fieldErrorClass : fieldOkClass}`}
             />
-            {errors.subject ? (
+            {subjectError ? (
               <p id="subject-error" className="text-sm text-red-800">
-                {errors.subject}
+                {subjectError}
               </p>
             ) : null}
           </div>
@@ -100,24 +150,25 @@ export default function TicketForm() {
               name="description"
               rows={6}
               value={values.description}
-              onChange={(event) =>
+              onChange={(event) => {
+                dismiss("description");
                 setValues((current) => ({
                   ...current,
                   description: event.target.value,
-                }))
-              }
-              aria-invalid={Boolean(errors.description)}
+                }));
+              }}
+              aria-invalid={Boolean(descriptionError)}
               aria-describedby={
-                errors.description ? "description-error" : undefined
+                descriptionError ? "description-error" : undefined
               }
               placeholder="What happened, and what should happen instead?"
               className={`${fieldClass} resize-y ${
-                errors.description ? fieldErrorClass : fieldOkClass
+                descriptionError ? fieldErrorClass : fieldOkClass
               }`}
             />
-            {errors.description ? (
+            {descriptionError ? (
               <p id="description-error" className="text-sm text-red-800">
-                {errors.description}
+                {descriptionError}
               </p>
             ) : null}
           </div>
@@ -127,23 +178,24 @@ export default function TicketForm() {
             <PrioritySelect
               name="priority"
               value={values.priority}
-              onChange={(priority) =>
-                setValues((current) => ({ ...current, priority }))
-              }
+              onChange={(priority) => {
+                dismiss("priority");
+                setValues((current) => ({ ...current, priority }));
+              }}
               disabled={pending}
-              error={errors.priority}
-              describedBy={errors.priority ? "priority-error" : undefined}
+              error={priorityError}
+              describedBy={priorityError ? "priority-error" : undefined}
             />
-            {errors.priority ? (
+            {priorityError ? (
               <p id="priority-error" className="text-sm text-red-800">
-                {errors.priority}
+                {priorityError}
               </p>
             ) : null}
           </div>
 
-          {!state.success && state.message ? (
+          {!displayState.success && message ? (
             <p className="text-sm text-red-800" role="status" aria-live="polite">
-              {state.message}
+              {message}
             </p>
           ) : null}
 

@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState, useCallback, useState } from "react";
-import Link from "next/link";
 import { FiLoader } from "react-icons/fi";
 import {
   initialUpdateUserState,
@@ -9,6 +8,7 @@ import {
 } from "@/app/actions/users-schema";
 import PasswordInput from "@/components/password-input";
 import Toast from "@/components/toast";
+import { useDismissedErrors } from "@/lib/dismissed-form-errors";
 
 const fieldClass =
   "w-full border border-ink/15 bg-paper px-4 py-3 text-ink placeholder:text-sage/70 transition hover:border-ink/35 focus-visible:border-brass focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-70";
@@ -47,7 +47,14 @@ export default function EditUserForm({
   });
   const [toastClosed, setToastClosed] = useState(false);
   const [handledMessage, setHandledMessage] = useState<string | null>(null);
+  const { dismiss, resetDismissed, fieldError, formMessage } =
+    useDismissedErrors();
   const errors = state.errors ?? {};
+  const nameError = fieldError(errors, "name");
+  const emailError = fieldError(errors, "email");
+  const roleError = fieldError(errors, "role");
+  const passwordError = fieldError(errors, "password");
+  const message = formMessage(state.message);
 
   if (
     state.success &&
@@ -64,7 +71,12 @@ export default function EditUserForm({
 
   return (
     <>
-      <form className="mt-10 space-y-6" action={formAction} noValidate>
+      <form
+        className="mt-10 space-y-6"
+        action={formAction}
+        onSubmit={resetDismissed}
+        noValidate
+      >
         <fieldset disabled={pending} className={fieldsetClass}>
           <div className="space-y-2">
             <label htmlFor="name" className="block text-sm font-medium text-ink">
@@ -76,19 +88,20 @@ export default function EditUserForm({
               type="text"
               autoComplete="name"
               value={values.name}
-              onChange={(event) =>
+              onChange={(event) => {
+                dismiss("name");
                 setValues((current) => ({
                   ...current,
                   name: event.target.value,
-                }))
-              }
-              aria-invalid={Boolean(errors.name)}
-              aria-describedby={errors.name ? "name-error" : undefined}
-              className={`${fieldClass} ${errors.name ? fieldErrorClass : ""}`}
+                }));
+              }}
+              aria-invalid={Boolean(nameError)}
+              aria-describedby={nameError ? "name-error" : undefined}
+              className={`${fieldClass} ${nameError ? fieldErrorClass : ""}`}
             />
-            {errors.name ? (
+            {nameError ? (
               <p id="name-error" className="text-sm text-red-800">
-                {errors.name}
+                {nameError}
               </p>
             ) : null}
           </div>
@@ -107,21 +120,22 @@ export default function EditUserForm({
               autoComplete="email"
               value={values.email}
               readOnly={lockEmail}
-              onChange={(event) =>
+              onChange={(event) => {
+                dismiss("email");
                 setValues((current) => ({
                   ...current,
                   email: event.target.value,
-                }))
-              }
-              aria-invalid={Boolean(errors.email)}
-              aria-describedby={errors.email ? "email-error" : undefined}
-              className={`${fieldClass} ${errors.email ? fieldErrorClass : ""} ${
+                }));
+              }}
+              aria-invalid={Boolean(emailError)}
+              aria-describedby={emailError ? "email-error" : undefined}
+              className={`${fieldClass} ${emailError ? fieldErrorClass : ""} ${
                 lockEmail ? "opacity-70" : ""
               }`}
             />
-            {errors.email ? (
+            {emailError ? (
               <p id="email-error" className="text-sm text-red-800">
-                {errors.email}
+                {emailError}
               </p>
             ) : null}
           </div>
@@ -134,22 +148,23 @@ export default function EditUserForm({
               id="role"
               name="role"
               value={values.role}
-              onChange={(event) =>
+              onChange={(event) => {
+                dismiss("role");
                 setValues((current) => ({
                   ...current,
                   role: event.target.value as "USER" | "ADMIN",
-                }))
-              }
-              aria-invalid={Boolean(errors.role)}
-              aria-describedby={errors.role ? "role-error" : undefined}
-              className={`${fieldClass} ${errors.role ? fieldErrorClass : ""}`}
+                }));
+              }}
+              aria-invalid={Boolean(roleError)}
+              aria-describedby={roleError ? "role-error" : undefined}
+              className={`${fieldClass} ${roleError ? fieldErrorClass : ""}`}
             >
               <option value="USER">User</option>
               <option value="ADMIN">Admin</option>
             </select>
-            {errors.role ? (
+            {roleError ? (
               <p id="role-error" className="text-sm text-red-800">
-                {errors.role}
+                {roleError}
               </p>
             ) : null}
           </div>
@@ -165,21 +180,22 @@ export default function EditUserForm({
               id="password"
               autoComplete="new-password"
               value={values.password}
-              onChange={(event) =>
+              onChange={(event) => {
+                dismiss("password");
                 setValues((current) => ({
                   ...current,
                   password: event.target.value,
-                }))
-              }
-              aria-invalid={Boolean(errors.password)}
+                }));
+              }}
+              aria-invalid={Boolean(passwordError)}
               aria-describedby={
-                errors.password ? "password-error" : "password-hint"
+                passwordError ? "password-error" : "password-hint"
               }
-              className={`${fieldClass} ${errors.password ? fieldErrorClass : ""}`}
+              className={`${fieldClass} ${passwordError ? fieldErrorClass : ""}`}
             />
-            {errors.password ? (
+            {passwordError ? (
               <p id="password-error" className="text-sm text-red-800">
-                {errors.password}
+                {passwordError}
               </p>
             ) : (
               <p id="password-hint" className="text-sm text-sage">
@@ -190,14 +206,14 @@ export default function EditUserForm({
             )}
           </div>
 
-          {state.message && !state.success ? (
+          {message && !state.success ? (
             <p className="text-sm text-red-800" role="status">
-              {state.message}
+              {message}
             </p>
           ) : null}
         </fieldset>
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="flex flex-col gap-3 pt-4 sm:flex-row sm:items-center">
           <button
             type="submit"
             disabled={pending}
@@ -212,12 +228,6 @@ export default function EditUserForm({
               "Save changes"
             )}
           </button>
-          <Link
-            href="/users"
-            className="inline-flex w-full cursor-pointer items-center justify-center border border-ink/20 px-7 py-3.5 text-sm font-medium text-ink transition hover:border-ink hover:bg-mist/40 sm:w-auto"
-          >
-            Back to users
-          </Link>
         </div>
       </form>
 

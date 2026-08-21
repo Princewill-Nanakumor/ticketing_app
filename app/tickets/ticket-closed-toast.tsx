@@ -25,12 +25,11 @@ export default function TicketClosedToast() {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    requestNavbarSync();
-
     if (readFlashCookie() !== "ticket_closed") {
       return;
     }
 
+    requestNavbarSync();
     clearFlashCookie();
     queueMicrotask(() => setOpen(true));
   }, []);

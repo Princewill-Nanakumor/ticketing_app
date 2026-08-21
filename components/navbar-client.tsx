@@ -1,18 +1,61 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { FiMenu, FiX } from "react-icons/fi";
+import { useFormStatus } from "react-dom";
+import { FiLoader, FiMenu, FiX } from "react-icons/fi";
 import { logout } from "@/app/actions/auth";
 import {
   syncNavbarAuth,
   type NavbarAuth,
 } from "@/app/actions/navbar-auth";
+import { startNavigationLoading } from "@/components/navigation-spinner";
 import { NAVBAR_SYNC_EVENT } from "@/lib/navbar-sync";
 
 const linkBaseClass =
   "block px-2 py-2 text-sm transition hover:text-ink md:inline-block md:py-1.5";
+const SESSION_CHECK_MS = 30_000;
+
+function toAuth(
+  firstName: string | null | undefined,
+  isAuthenticated: boolean,
+  isAdmin: boolean,
+  ticketCount: number,
+): NavbarAuth {
+  return {
+    firstName: firstName ?? null,
+    isAuthenticated,
+    isAdmin,
+    ticketCount,
+  };
+}
+
+function LogoutButton() {
+  const { pending } = useFormStatus();
+
+  useEffect(() => {
+    if (pending) {
+      startNavigationLoading();
+    }
+  }, [pending]);
+
+  return (
+    <button
+      type="submit"
+      className="flex w-full cursor-pointer items-center justify-center gap-2 border border-red-700/40 bg-red-700 px-3 py-2 text-sm font-medium text-white transition hover:bg-red-800 md:w-auto md:py-1.5"
+    >
+      {pending ? (
+        <>
+          <FiLoader aria-hidden className="spinner size-4" />
+          <span>Logging out…</span>
+        </>
+      ) : (
+        "Log out"
+      )}
+    </button>
+  );
+}
 
 export default function NavbarClient({
   firstName,
@@ -28,46 +71,78 @@ export default function NavbarClient({
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [auth, setAuth] = useState<NavbarAuth>({
-    firstName: firstName ?? null,
-    isAuthenticated,
-    isAdmin,
-    ticketCount,
-  });
-  const [, startTransition] = useTransition();
+  const serverAuth = toAuth(firstName, isAuthenticated, isAdmin, ticketCount);
+  const [auth, setAuth] = useState<NavbarAuth>(serverAuth);
+  const [prevServerAuth, setPrevServerAuth] = useState(serverAuth);
+  const inFlightRef = useRef<Promise<NavbarAuth> | null>(null);
+  const lastCheckRef = useRef(0);
+
+  if (
+    prevServerAuth.firstName !== serverAuth.firstName ||
+    prevServerAuth.isAuthenticated !== serverAuth.isAuthenticated ||
+    prevServerAuth.isAdmin !== serverAuth.isAdmin ||
+    prevServerAuth.ticketCount !== serverAuth.ticketCount
+  ) {
+    setPrevServerAuth(serverAuth);
+    setAuth(serverAuth);
+  }
+
+  const refreshAuth = useCallback(
+    (force = false) => {
+      const now = Date.now();
+
+      if (!force && now - lastCheckRef.current < SESSION_CHECK_MS) {
+        return inFlightRef.current;
+      }
+
+      if (inFlightRef.current) {
+        return inFlightRef.current;
+      }
+
+      lastCheckRef.current = now;
+      const request = syncNavbarAuth()
+        .then((next) => {
+          setAuth((current) => {
+            if (current.isAuthenticated && !next.isAuthenticated) {
+              queueMicrotask(() => router.refresh());
+            }
+            return next;
+          });
+          return next;
+        })
+        .finally(() => {
+          if (inFlightRef.current === request) {
+            inFlightRef.current = null;
+          }
+        });
+
+      inFlightRef.current = request;
+      return request;
+    },
+    [router],
+  );
 
   useEffect(() => {
-    let cancelled = false;
-
-    function refreshAuth() {
-      startTransition(async () => {
-        const next = await syncNavbarAuth();
-        if (cancelled) {
-          return;
-        }
-
-        setAuth((current) => {
-          if (current.isAuthenticated && !next.isAuthenticated) {
-            queueMicrotask(() => router.refresh());
-          }
-          return next;
-        });
-      });
-    }
-
-    refreshAuth();
+    lastCheckRef.current = Date.now();
 
     function onNavbarSync() {
-      refreshAuth();
+      void refreshAuth(true);
+    }
+
+    function onVisible() {
+      if (document.visibilityState === "visible") {
+        void refreshAuth(false);
+      }
     }
 
     window.addEventListener(NAVBAR_SYNC_EVENT, onNavbarSync);
+    document.addEventListener("visibilitychange", onVisible);
 
     return () => {
-      cancelled = true;
       window.removeEventListener(NAVBAR_SYNC_EVENT, onNavbarSync);
+      document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [pathname, router]);
+  }, [refreshAuth]);
 
   function closeMenu() {
     setOpen(false);
@@ -170,12 +245,7 @@ export default function NavbarClient({
                 </span>
               ) : null}
               <form action={logout} className="mt-2 md:mt-0">
-                <button
-                  type="submit"
-                  className="w-full cursor-pointer border border-red-700/40 bg-red-700 px-3 py-2 text-sm font-medium text-white transition hover:bg-red-800 md:w-auto md:py-1.5"
-                >
-                  Log out
-                </button>
+                <LogoutButton />
               </form>
             </>
           ) : (

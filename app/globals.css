@@ -93,10 +93,98 @@ body {
 @keyframes toast-in {
   from {
     opacity: 0;
+    transform: translateX(1.25rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes toast-swipe-right {
+  0% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  32% {
+    opacity: 1;
+    transform: translateX(-1.35rem);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(calc(100% + 2.5rem));
+  }
+}
+
+@keyframes toast-swipe-left {
+  0% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  32% {
+    opacity: 1;
+    transform: translateX(1.35rem);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(calc(-100% - 2.5rem));
+  }
+}
+
+@keyframes modal-overlay-in {
+  from {
+    opacity: 0;
   }
   to {
     opacity: 1;
   }
+}
+
+@keyframes modal-overlay-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes modal-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(1rem) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes modal-panel-out {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(0.65rem) scale(0.96);
+  }
+}
+
+.modal-overlay {
+  animation: modal-overlay-in 0.28s ease both;
+}
+
+.modal-panel {
+  animation: modal-panel-in 0.34s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.modal-overlay.is-exiting {
+  animation: modal-overlay-out 0.22s ease both;
+}
+
+.modal-overlay.is-exiting .modal-panel {
+  animation: modal-panel-out 0.22s ease both;
 }
 
 .spinner {
@@ -125,6 +213,14 @@ body {
   animation: toast-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+.toast-exit.toast-exit-right {
+  animation: toast-swipe-right 0.48s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.toast-exit.toast-exit-left {
+  animation: toast-swipe-left 0.48s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 @media (min-width: 768px) {
   .toast-viewport {
     right: max(1.5rem, env(safe-area-inset-right));
@@ -141,7 +237,13 @@ body {
   .hero-drift,
   .hero-line,
   .spinner,
-  .toast-enter.is-visible {
+  .toast-enter.is-visible,
+  .toast-exit.toast-exit-right,
+  .toast-exit.toast-exit-left,
+  .modal-overlay,
+  .modal-panel,
+  .modal-overlay.is-exiting,
+  .modal-overlay.is-exiting .modal-panel {
     animation: none;
   }
 }

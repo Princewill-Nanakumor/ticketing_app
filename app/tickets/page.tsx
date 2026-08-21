@@ -1,12 +1,19 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { FiArrowLeft } from "react-icons/fi";
 import { getTickets } from "@/app/actions/tickets";
+import { getUserById } from "@/app/actions/users";
 import { AUTH_ENABLED } from "@/lib/auth-config";
 import { getCurrentUser, isAdmin } from "@/lib/current-user";
+import { isUserId } from "@/lib/user-id";
 import { getPriorityClass } from "@/lib/utils";
 import CloseTicketButton from "./close-ticket-button";
 import SignInToast from "./sign-in-toast";
 import TicketClosedToast from "./ticket-closed-toast";
+
+type TicketsPageProps = {
+  searchParams: Promise<{ userId?: string | string[] }>;
+};
 
 function formatDate(value: Date) {
   return new Intl.DateTimeFormat("en", {
@@ -15,53 +22,100 @@ function formatDate(value: Date) {
   }).format(value);
 }
 
-export default async function TicketsPage() {
+export default async function TicketsPage({ searchParams }: TicketsPageProps) {
   const user = await getCurrentUser();
 
   if (AUTH_ENABLED && !user) {
     redirect("/login");
   }
 
-  const tickets = await getTickets();
   const admin = isAdmin(user);
+  const rawUserId = (await searchParams).userId;
+  const requestedUserId =
+    admin && typeof rawUserId === "string" && isUserId(rawUserId)
+      ? rawUserId
+      : undefined;
+  const filterUser = requestedUserId
+    ? await getUserById(requestedUserId)
+    : null;
+  const tickets = await getTickets(
+    requestedUserId ? { userId: requestedUserId } : undefined,
+  );
   const ticketCount = tickets.length;
+  const filteredListPath = requestedUserId
+    ? `/tickets?userId=${requestedUserId}`
+    : "/tickets";
+  const viewingUserTickets = Boolean(requestedUserId);
 
   return (
     <main className="min-h-screen bg-paper px-6 py-10 text-ink sm:px-10 lg:px-16">
       <div className="mx-auto w-full max-w-4xl">
-        <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
+        {viewingUserTickets ? (
+          <Link
+            href="/users"
+            className="inline-flex items-center gap-2 text-sm text-sage underline-offset-4 hover:text-ink hover:underline"
+          >
+            <FiArrowLeft aria-hidden className="size-4" />
+            Back to users
+          </Link>
+        ) : null}
+        <div
+          className={`flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between ${
+            viewingUserTickets ? "mt-8" : ""
+          }`}
+        >
           <div>
             <h1 className="font-(family-name:--font-helix-display) text-4xl leading-tight">
-              {admin ? "All tickets" : "Your tickets"}
+              {filterUser
+                ? `${filterUser.name}'s tickets`
+                : viewingUserTickets
+                  ? "User tickets"
+                  : admin
+                    ? "All tickets"
+                    : "Your tickets"}
             </h1>
             <p className="mt-4 max-w-md text-sage">
-              {admin
-                ? "Admin view of every request across Helix."
-                : "Open and resolved requests you have submitted."}
+              {filterUser
+                ? `Open and resolved requests submitted by ${filterUser.name}.`
+                : viewingUserTickets
+                  ? "This user could not be found."
+                  : admin
+                    ? "Admin view of every request across Helix."
+                    : "Open and resolved requests you have submitted."}
             </p>
             <p className="mt-2 text-sm text-ink">
               {ticketCount} ticket{ticketCount === 1 ? "" : "s"}
             </p>
           </div>
 
-          <Link
-            href="/tickets/new"
-            className="inline-flex cursor-pointer items-center justify-center bg-ink px-6 py-3 text-sm font-medium text-paper transition hover:bg-ink-soft"
-          >
-            Submit a ticket
-          </Link>
+          {viewingUserTickets ? null : (
+            <Link
+              href="/tickets/new"
+              className="inline-flex cursor-pointer items-center justify-center bg-ink px-6 py-3 text-sm font-medium text-paper transition hover:bg-ink-soft"
+            >
+              Submit a ticket
+            </Link>
+          )}
         </div>
 
         {tickets.length === 0 ? (
           <p className="mt-14 border-t border-ink/10 pt-10 text-sage">
-            No tickets yet.{" "}
-            <Link
-              href="/tickets/new"
-              className="text-ink underline underline-offset-4 hover:underline"
-            >
-              Submit the first one
-            </Link>
-            .
+            {viewingUserTickets ? (
+              filterUser
+                ? "No tickets for this user."
+                : "This user could not be found."
+            ) : (
+              <>
+                No tickets yet.{" "}
+                <Link
+                  href="/tickets/new"
+                  className="text-ink underline underline-offset-4 hover:underline"
+                >
+                  Submit the first one
+                </Link>
+                .
+              </>
+            )}
           </p>
         ) : (
           <ul className="mt-14 divide-y divide-ink/10 border-t border-ink/10">
@@ -88,7 +142,7 @@ export default async function TicketsPage() {
                       >
                         {ticket.description}
                       </p>
-                      {admin ? (
+                      {admin && !viewingUserTickets ? (
                         <p className={`mt-3 text-sm text-sage ${struck}`}>
                           From {ticket.user.name} · {ticket.user.email}
                         </p>
@@ -110,7 +164,11 @@ export default async function TicketsPage() {
 
                     <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
                       <Link
-                        href={`/tickets/${ticket.id}`}
+                        href={
+                          requestedUserId
+                            ? `/tickets/${ticket.id}?userId=${requestedUserId}`
+                            : `/tickets/${ticket.id}`
+                        }
                         className="inline-flex w-full cursor-pointer items-center justify-center border border-ink/20 px-5 py-2.5 text-sm font-medium text-ink transition hover:border-ink hover:bg-mist/40 sm:w-auto"
                       >
                         View
@@ -118,7 +176,10 @@ export default async function TicketsPage() {
                       {!isClosed &&
                       user &&
                       (admin || ticket.userId === user.id) ? (
-                        <CloseTicketButton ticketId={ticket.id} />
+                        <CloseTicketButton
+                          ticketId={ticket.id}
+                          redirectTo={filteredListPath}
+                        />
                       ) : null}
                     </div>
                   </div>

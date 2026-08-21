@@ -6,6 +6,9 @@ type LogLevel = "fatal" | "error" | "warning" | "info" | "debug";
  * Single entry point for Sentry events.
  * Pass `error` to capture an exception; otherwise logs `message`.
  * Never throws — logging must not break auth or ticket flows.
+ *
+ * Info/warning events are queued without blocking the request. Errors still
+ * flush so they are not lost if the serverless function freezes next.
  */
 export async function logEvent(
   message: string,
@@ -41,7 +44,10 @@ export async function logEvent(
       });
     }
 
-    await Sentry.flush(2000);
+    if (level === "error" || level === "fatal") {
+      await Sentry.flush(2000);
+    }
+
     return eventId;
   } catch (loggingError) {
     console.error("Sentry logEvent failed:", loggingError);

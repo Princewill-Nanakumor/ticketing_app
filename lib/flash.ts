@@ -10,3 +10,8 @@ export async function setFlash(message: FlashMessage) {
     maxAge: 60,
   });
 }
+
+export async function getFlash() {
+  const cookieStore = await cookies();
+  return cookieStore.get(FLASH_COOKIE)?.value ?? null;
+}

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Libre_Franklin, Syne } from "next/font/google";
 import Navbar from "@/components/navbar";
+import NavigationSpinner from "@/components/navigation-spinner";
 import "./globals.css";
 
 const display = Syne({
@@ -74,6 +75,7 @@ export default function RootLayout({
     >
       <body className="flex min-h-full flex-col font-sans">
         <Navbar />
+        <NavigationSpinner />
         {children}
       </body>
     </html>

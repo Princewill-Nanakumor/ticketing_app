@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { FiArrowLeft } from "react-icons/fi";
 import { getUserById, updateUser } from "@/app/actions/users";
 import { isAdminEmail } from "@/lib/admin";
 import { getCurrentUser, isAdmin } from "@/lib/current-user";
@@ -34,8 +35,9 @@ export default async function EditUserPage({ params }: EditUserPageProps) {
       <div className="mx-auto w-full max-w-xl">
         <Link
           href="/users"
-          className="text-sm text-sage underline-offset-4 hover:text-ink hover:underline"
+          className="inline-flex items-center gap-2 text-sm text-sage underline-offset-4 hover:text-ink hover:underline"
         >
+          <FiArrowLeft aria-hidden className="size-4" />
           Back to users
         </Link>
         <h1 className="mt-8 font-(family-name:--font-helix-display) text-4xl leading-tight">

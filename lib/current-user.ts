@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
@@ -49,7 +50,7 @@ export async function destroySession() {
   cookieStore.delete(SESSION_COOKIE);
 }
 
-export async function getSessionUser(): Promise<SessionUser | null> {
+export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
   if (!AUTH_ENABLED) {
     return null;
   }
@@ -78,9 +79,9 @@ export async function getSessionUser(): Promise<SessionUser | null> {
   } catch {
     return null;
   }
-}
+});
 
-export async function getCurrentUser() {
+export const getCurrentUser = cache(async () => {
   if (!AUTH_ENABLED) {
     return null;
   }
@@ -98,9 +99,12 @@ export async function getCurrentUser() {
       email: true,
       name: true,
       role: true,
+      _count: {
+        select: { ownedTickets: true },
+      },
     },
   });
-}
+});
 
 export function isAdmin(user: { role: Role } | null | undefined) {
   return user?.role === "ADMIN";

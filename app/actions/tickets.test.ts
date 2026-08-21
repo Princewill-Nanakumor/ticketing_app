@@ -178,6 +178,32 @@ describe("getTickets", () => {
       }),
     );
   });
+
+  it("lets admins filter tickets by user", async () => {
+    vi.mocked(getCurrentUser).mockResolvedValue(admin as never);
+    vi.mocked(prisma.ticket.findMany).mockResolvedValue([] as never);
+
+    await getTickets({ userId: owner.id });
+
+    expect(prisma.ticket.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { userId: owner.id },
+      }),
+    );
+  });
+
+  it("ignores a user filter for regular users", async () => {
+    vi.mocked(getCurrentUser).mockResolvedValue(owner as never);
+    vi.mocked(prisma.ticket.findMany).mockResolvedValue([] as never);
+
+    await getTickets({ userId: stranger.id });
+
+    expect(prisma.ticket.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { userId: owner.id },
+      }),
+    );
+  });
 });
 
 describe("getTicketById", () => {

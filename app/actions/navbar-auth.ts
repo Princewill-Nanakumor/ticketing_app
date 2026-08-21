@@ -40,7 +40,14 @@ export async function syncNavbarAuth(): Promise<NavbarAuth> {
 
   const user = await prisma.user.findFirst({
     where: { id: session.id, deletedAt: null },
-    select: { id: true, name: true, role: true },
+    select: {
+      id: true,
+      name: true,
+      role: true,
+      _count: {
+        select: { ownedTickets: true },
+      },
+    },
   });
 
   if (!user) {
@@ -49,9 +56,9 @@ export async function syncNavbarAuth(): Promise<NavbarAuth> {
   }
 
   const admin = isAdmin(user);
-  const ticketCount = await prisma.ticket.count({
-    where: admin ? undefined : { userId: user.id },
-  });
+  const ticketCount = admin
+    ? await prisma.ticket.count()
+    : user._count.ownedTickets;
 
   return {
     firstName: getFirstName(user.name),

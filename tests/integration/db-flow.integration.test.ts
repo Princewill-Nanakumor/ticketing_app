@@ -3,6 +3,7 @@ import bcrypt from "bcrypt";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { PrismaClient } from "@/app/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
+import { pgConnectionString } from "@/lib/pg-connection-string";
 import { generateTicketId } from "@/lib/ticket-id";
 import { generateUserId } from "@/lib/user-id";
 
@@ -18,7 +19,7 @@ describeIntegration("database integration", () => {
 
   beforeAll(() => {
     const adapter = new PrismaPg({
-      connectionString: process.env.DATABASE_URL!,
+      connectionString: pgConnectionString(process.env.DATABASE_URL!),
     });
     prisma = new PrismaClient({ adapter });
   });
@@ -124,7 +125,7 @@ describeIntegration("database integration", () => {
     expect(closed.closedAt).toBeInstanceOf(Date);
     expect(loaded?.user.email).toBe(email);
     expect(loaded?.comments).toHaveLength(1);
-    expect(loaded?.activities.map((a) => a.action)).toEqual([
+    expect(loaded?.activities.map((activity) => activity.action)).toEqual([
       "created",
       "commented",
       "closed",

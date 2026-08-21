@@ -20,17 +20,24 @@ function clearFlashCookie() {
   document.cookie = `${FLASH_COOKIE}=; Max-Age=0; path=/; SameSite=Lax`;
 }
 
-export default function UserDeletedToast() {
+export default function UserDeletedToast({
+  flash = null,
+}: {
+  flash?: string | null;
+}) {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    if (readFlashCookie() !== "user_deleted") {
+    const shouldShow =
+      flash === "user_deleted" || readFlashCookie() === "user_deleted";
+
+    if (!shouldShow) {
       return;
     }
 
     clearFlashCookie();
     queueMicrotask(() => setOpen(true));
-  }, []);
+  }, [flash]);
 
   const closeToast = useCallback(() => {
     setOpen(false);

@@ -39,8 +39,8 @@ export default function SignInToast() {
   return (
     <Toast
       open={open}
-      title="Signed in"
-      message="Signed in successfully."
+      title="Welcome"
+      message="Welcome back. You're signed in."
       onClose={closeToast}
     />
   );

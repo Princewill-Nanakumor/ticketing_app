@@ -15,9 +15,9 @@ export default async function Navbar() {
   const user = await getCurrentUser();
   const admin = isAdmin(user);
   const ticketCount = user
-    ? await prisma.ticket.count({
-        where: admin ? undefined : { userId: user.id },
-      })
+    ? admin
+      ? await prisma.ticket.count()
+      : user._count.ownedTickets
     : 0;
 
   return (

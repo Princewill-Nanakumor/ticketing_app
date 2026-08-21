@@ -4,10 +4,15 @@ import { useActionState, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { register } from "@/app/actions/auth";
-import { getPasswordHint } from "@/app/actions/auth-schema";
-import { initialAuthState } from "@/app/actions/auth-state";
+import {
+  getAuthFieldErrors,
+  getPasswordHint,
+  registerSchema,
+} from "@/app/actions/auth-schema";
+import { initialAuthState, type AuthState } from "@/app/actions/auth-state";
 import PasswordInput from "@/components/password-input";
 import Toast from "@/components/toast";
+import { useDismissedErrors } from "@/lib/dismissed-form-errors";
 
 const fieldClass =
   "w-full border border-ink/15 bg-paper px-4 py-3 text-ink placeholder:text-sage/70 transition hover:border-ink/35 focus-visible:border-brass focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-70";
@@ -29,17 +34,29 @@ const emptyValues: RegisterValues = {
 
 export default function RegisterForm() {
   const router = useRouter();
-  const [state, formAction, pending] = useActionState(
-    register,
-    initialAuthState,
-  );
+  const [state, formAction] = useActionState(register, initialAuthState);
   const [values, setValues] = useState<RegisterValues>(emptyValues);
+  const [submitting, setSubmitting] = useState(false);
+  const [clientState, setClientState] = useState<AuthState | null>(null);
   const [toastOpen, setToastOpen] = useState(false);
   const [handledMessage, setHandledMessage] = useState<string | null>(null);
-  const errors = state.errors ?? {};
+  const [prevState, setPrevState] = useState(state);
+  const { dismiss, resetDismissed, fieldError, formMessage } =
+    useDismissedErrors();
+
+  if (prevState !== state) {
+    setPrevState(state);
+    setSubmitting(false);
+  }
+
+  const displayState = submitting ? initialAuthState : (clientState ?? state);
+  const nameError = fieldError(displayState.errors, "name");
+  const emailError = fieldError(displayState.errors, "email");
+  const passwordError = fieldError(displayState.errors, "password");
+  const message = formMessage(displayState.message);
   const passwordHint =
     values.password.length > 0 ? getPasswordHint(values.password) : null;
-  const showPasswordHint = Boolean(passwordHint);
+  const showPasswordHint = Boolean(passwordHint) && !passwordError;
 
   if (
     state.success &&
@@ -67,11 +84,39 @@ export default function RegisterForm() {
     return () => window.clearTimeout(timer);
   }, [state.success, toastOpen, router]);
 
-  const formLocked = pending || state.success;
+  const formLocked = submitting || state.success;
+
+  function handleAction(formData: FormData) {
+    resetDismissed();
+    const parsed = registerSchema.safeParse({
+      name: formData.get("name"),
+      email: formData.get("email"),
+      password: formData.get("password"),
+    });
+
+    if (!parsed.success) {
+      setSubmitting(false);
+      setClientState({
+        success: false,
+        message: "Please fix the errors above.",
+        errors: getAuthFieldErrors(parsed.error),
+      });
+      return;
+    }
+
+    setClientState(null);
+    setSubmitting(true);
+    formAction(formData);
+  }
 
   return (
     <>
-      <form className="mt-10 space-y-6" action={formAction} noValidate>
+      <form
+        className="mt-10 space-y-6"
+        action={handleAction}
+        noValidate
+        aria-busy={submitting}
+      >
         <fieldset disabled={formLocked} className={fieldsetClass}>
           <div className="space-y-2">
             <label htmlFor="name" className="block text-sm font-medium text-ink">
@@ -83,19 +128,20 @@ export default function RegisterForm() {
               type="text"
               autoComplete="name"
               value={values.name}
-              onChange={(event) =>
+              onChange={(event) => {
+                dismiss("name");
                 setValues((current) => ({
                   ...current,
                   name: event.target.value,
-                }))
-              }
-              aria-invalid={Boolean(errors.name)}
-              aria-describedby={errors.name ? "name-error" : undefined}
-              className={`${fieldClass} ${errors.name ? fieldErrorClass : ""}`}
+                }));
+              }}
+              aria-invalid={Boolean(nameError)}
+              aria-describedby={nameError ? "name-error" : undefined}
+              className={`${fieldClass} ${nameError ? fieldErrorClass : ""}`}
             />
-            {errors.name ? (
+            {nameError ? (
               <p id="name-error" className="text-sm text-red-800">
-                {errors.name}
+                {nameError}
               </p>
             ) : null}
           </div>
@@ -113,19 +159,20 @@ export default function RegisterForm() {
               type="email"
               autoComplete="email"
               value={values.email}
-              onChange={(event) =>
+              onChange={(event) => {
+                dismiss("email");
                 setValues((current) => ({
                   ...current,
                   email: event.target.value,
-                }))
-              }
-              aria-invalid={Boolean(errors.email)}
-              aria-describedby={errors.email ? "email-error" : undefined}
-              className={`${fieldClass} ${errors.email ? fieldErrorClass : ""}`}
+                }));
+              }}
+              aria-invalid={Boolean(emailError)}
+              aria-describedby={emailError ? "email-error" : undefined}
+              className={`${fieldClass} ${emailError ? fieldErrorClass : ""}`}
             />
-            {errors.email ? (
+            {emailError ? (
               <p id="email-error" className="text-sm text-red-800">
-                {errors.email}
+                {emailError}
               </p>
             ) : null}
           </div>
@@ -141,27 +188,28 @@ export default function RegisterForm() {
               id="password"
               autoComplete="new-password"
               value={values.password}
-              onChange={(event) =>
+              onChange={(event) => {
+                dismiss("password");
                 setValues((current) => ({
                   ...current,
                   password: event.target.value,
-                }))
-              }
-              aria-invalid={Boolean(errors.password) || showPasswordHint}
+                }));
+              }}
+              aria-invalid={Boolean(passwordError) || showPasswordHint}
               aria-describedby={
-                errors.password
+                passwordError
                   ? "password-error"
                   : showPasswordHint
                     ? "password-hint"
                     : undefined
               }
               className={`${fieldClass} ${
-                errors.password || showPasswordHint ? fieldErrorClass : ""
+                passwordError || showPasswordHint ? fieldErrorClass : ""
               }`}
             />
-            {errors.password ? (
+            {passwordError ? (
               <p id="password-error" className="text-sm text-red-800">
-                {errors.password}
+                {passwordError}
               </p>
             ) : showPasswordHint ? (
               <p id="password-hint" className="text-sm text-red-800">
@@ -170,9 +218,9 @@ export default function RegisterForm() {
             ) : null}
           </div>
 
-          {state.message && !state.success ? (
+          {message && !displayState.success ? (
             <p className="text-sm text-red-800" role="status">
-              {state.message}
+              {message}
             </p>
           ) : null}
 
@@ -180,7 +228,7 @@ export default function RegisterForm() {
             type="submit"
             className="flex w-full cursor-pointer items-center justify-center bg-ink px-7 py-3.5 text-sm font-medium tracking-wide text-paper transition hover:bg-ink-soft disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
           >
-            {pending
+            {submitting
               ? "Creating…"
               : state.success
                 ? "Account created"

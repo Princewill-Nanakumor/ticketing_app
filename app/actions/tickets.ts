@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { logEvent } from "@/lib/sentry";
 import { getCurrentUser, isAdmin } from "@/lib/current-user";
 import { generateTicketId, isTicketId } from "@/lib/ticket-id";
+import { isUserId } from "@/lib/user-id";
 import { recordTicketActivity } from "@/lib/ticket-activity";
 import { setFlash } from "@/lib/flash";
 import { TicketStatus } from "@/app/generated/prisma/client";
@@ -193,7 +194,21 @@ export async function createTicket(
   }
 }
 
-export async function getTickets() {
+function ticketListRedirect(redirectToRaw: string, ticketId: string) {
+  if (redirectToRaw === "/tickets" || redirectToRaw.startsWith("/tickets/")) {
+    return redirectToRaw;
+  }
+
+  const filterMatch = /^\/tickets\?userId=([A-Z]{2}\d{7})$/.exec(redirectToRaw);
+
+  if (filterMatch && isUserId(filterMatch[1])) {
+    return redirectToRaw;
+  }
+
+  return `/tickets/${ticketId}`;
+}
+
+export async function getTickets(options?: { userId?: string }) {
   try {
     const user = await getCurrentUser();
 
@@ -207,10 +222,18 @@ export async function getTickets() {
       return [];
     }
 
-    // Admins see every ticket; regular users only see their own.
+    // Admins see every ticket (or one user's); regular users only see their own.
     const admin = isAdmin(user);
+    const filterUserId =
+      admin && options?.userId && isUserId(options.userId)
+        ? options.userId
+        : undefined;
     const tickets = await prisma.ticket.findMany({
-      where: admin ? undefined : { userId: user.id },
+      where: admin
+        ? filterUserId
+          ? { userId: filterUserId }
+          : undefined
+        : { userId: user.id },
       orderBy: { createdAt: "desc" },
       include: {
         user: {
@@ -224,12 +247,17 @@ export async function getTickets() {
     });
 
     await logEvent(
-      admin ? "Fetched all tickets" : "Fetched user tickets",
+      admin
+        ? filterUserId
+          ? "Fetched user tickets for admin"
+          : "Fetched all tickets"
+        : "Fetched user tickets",
       "ticket",
       {
         count: tickets.length,
         userId: user.id,
         role: user.role,
+        filterUserId,
       },
       "info",
     );
@@ -309,10 +337,7 @@ export async function closeTicket(formData: FormData) {
   const user = await getCurrentUser();
   const ticketId = String(formData.get("ticketId") ?? "");
   const redirectToRaw = String(formData.get("redirectTo") ?? "").trim();
-  const redirectTo =
-    redirectToRaw === "/tickets" || redirectToRaw.startsWith("/tickets/")
-      ? redirectToRaw
-      : `/tickets/${ticketId}`;
+  const redirectTo = ticketListRedirect(redirectToRaw, ticketId);
 
   if (!user) {
     await logEvent(
